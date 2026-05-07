@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>競馬収支管理</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <h1>🏇 競馬収支管理</h1>
+  <div class="summary" id="summary">
+    <div class="summary-item">
+      <span class="label">総投資額</span>
+      <span class="value" id="totalInvest">¥0</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">総払戻金</span>
+      <span class="value" id="totalReturn">¥0</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">収支</span>
+      <span class="value" id="totalProfit">¥0</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">回収率</span>
+      <span class="value" id="totalRate">-</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">的中率</span>
+      <span class="value" id="totalHitRate">-</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="list">記録一覧</button>
+  <button class="tab-btn" data-tab="add">新規追加</button>
+  <button class="tab-btn" data-tab="stats">集計</button>
+  <button class="tab-btn" data-tab="data">データ管理</button>
+</nav>
+
+<main>
+  <!-- 記録一覧 -->
+  <section class="tab-content active" id="tab-list">
+    <div class="filter-bar">
+      <input type="text" id="filterText" placeholder="🔍 競馬場・メモなどで検索">
+      <select id="filterBetType">
+        <option value="">すべての馬券種別</option>
+      </select>
+      <input type="month" id="filterMonth">
+      <button id="clearFilter" class="btn-secondary">クリア</button>
+    </div>
+    <div class="record-count" id="recordCount"></div>
+    <div class="records" id="records"></div>
+  </section>
+
+  <!-- 新規追加 -->
+  <section class="tab-content" id="tab-add">
+    <form id="recordForm" class="record-form">
+      <input type="hidden" id="recordId">
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="date">日付 <span class="required">*</span></label>
+          <input type="date" id="date" required>
+        </div>
+        <div class="form-field">
+          <label for="venue">競馬場 <span class="required">*</span></label>
+          <select id="venue" required>
+            <option value="">選択してください</option>
+            <option>札幌</option>
+            <option>函館</option>
+            <option>福島</option>
+            <option>新潟</option>
+            <option>東京</option>
+            <option>中山</option>
+            <option>中京</option>
+            <option>京都</option>
+            <option>阪神</option>
+            <option>小倉</option>
+            <option>地方競馬</option>
+            <option>海外</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="raceNo">レース番号</label>
+          <input type="number" id="raceNo" min="1" max="12" placeholder="1〜12">
+        </div>
+        <div class="form-field">
+          <label for="raceName">レース名</label>
+          <input type="text" id="raceName" placeholder="例: 日本ダービー">
+        </div>
+        <div class="form-field">
+          <label for="betType">馬券種別 <span class="required">*</span></label>
+          <select id="betType" required>
+            <option value="">選択してください</option>
+            <option>単勝</option>
+            <option>複勝</option>
+            <option>枠連</option>
+            <option>馬連</option>
+            <option>馬単</option>
+            <option>ワイド</option>
+            <option>3連複</option>
+            <option>3連単</option>
+            <option>WIN5</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="selection">買い目</label>
+          <input type="text" id="selection" placeholder="例: 5-7、1-3-8">
+        </div>
+        <div class="form-field">
+          <label for="invest">投資額 (円) <span class="required">*</span></label>
+          <input type="number" id="invest" min="0" step="100" required placeholder="例: 1000">
+        </div>
+        <div class="form-field">
+          <label for="returnAmount">払戻金 (円)</label>
+          <input type="number" id="returnAmount" min="0" step="10" placeholder="外れた場合は0または空欄">
+        </div>
+        <div class="form-field full-width">
+          <label for="memo">メモ</label>
+          <textarea id="memo" rows="3" placeholder="予想根拠、反省点など"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="submitBtn">登録する</button>
+        <button type="button" class="btn-secondary" id="cancelEditBtn" style="display:none">キャンセル</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 集計 -->
+  <section class="tab-content" id="tab-stats">
+    <h2>集計</h2>
+    <div class="stats-section">
+      <h3>月別集計</h3>
+      <div class="stats-table-wrapper">
+        <table class="stats-table" id="monthlyStats"></table>
+      </div>
+    </div>
+    <div class="stats-section">
+      <h3>日別集計 (直近30日)</h3>
+      <div class="stats-table-wrapper">
+        <table class="stats-table" id="dailyStats"></table>
+      </div>
+    </div>
+    <div class="stats-section">
+      <h3>馬券種別ごとの集計</h3>
+      <div class="stats-table-wrapper">
+        <table class="stats-table" id="betTypeStats"></table>
+      </div>
+    </div>
+    <div class="stats-section">
+      <h3>競馬場ごとの集計</h3>
+      <div class="stats-table-wrapper">
+        <table class="stats-table" id="venueStats"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- データ管理 -->
+  <section class="tab-content" id="tab-data">
+    <h2>データ管理</h2>
+    <div class="data-actions">
+      <div class="data-card">
+        <h3>📤 エクスポート</h3>
+        <p>全データをJSONファイルとしてダウンロードします。バックアップにご利用ください。</p>
+        <button id="exportBtn" class="btn-primary">JSONでエクスポート</button>
+        <button id="exportCsvBtn" class="btn-secondary">CSVでエクスポート</button>
+      </div>
+      <div class="data-card">
+        <h3>📥 インポート</h3>
+        <p>JSONファイルからデータを復元します。既存データは上書きされます。</p>
+        <input type="file" id="importFile" accept="application/json,.json">
+        <button id="importBtn" class="btn-primary">インポート実行</button>
+      </div>
+      <div class="data-card danger">
+        <h3>⚠️ 全データ削除</h3>
+        <p>記録を全て削除します。この操作は取り消せません。</p>
+        <button id="resetBtn" class="btn-danger">全データを削除</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
