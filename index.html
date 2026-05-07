@@ -2,8 +2,16 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="競馬収支">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f6f3f">
+<meta name="format-detection" content="telephone=no">
 <title>競馬収支管理</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%231f6f3f'/><text x='90' y='118' font-size='100' text-anchor='middle' fill='white'>🏇</text></svg>">
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text x='16' y='25' font-size='24' text-anchor='middle'>🏇</text></svg>">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,11 +19,11 @@
   <h1>🏇 競馬収支管理</h1>
   <div class="summary" id="summary">
     <div class="summary-item">
-      <span class="label">総投資額</span>
+      <span class="label">投資</span>
       <span class="value" id="totalInvest">¥0</span>
     </div>
     <div class="summary-item">
-      <span class="label">総払戻金</span>
+      <span class="label">払戻</span>
       <span class="value" id="totalReturn">¥0</span>
     </div>
     <div class="summary-item">
@@ -26,30 +34,25 @@
       <span class="label">回収率</span>
       <span class="value" id="totalRate">-</span>
     </div>
-    <div class="summary-item">
+    <div class="summary-item summary-wide">
       <span class="label">的中率</span>
       <span class="value" id="totalHitRate">-</span>
     </div>
   </div>
 </header>
 
-<nav class="tabs">
-  <button class="tab-btn active" data-tab="list">記録一覧</button>
-  <button class="tab-btn" data-tab="add">新規追加</button>
-  <button class="tab-btn" data-tab="stats">集計</button>
-  <button class="tab-btn" data-tab="data">データ管理</button>
-</nav>
-
 <main>
   <!-- 記録一覧 -->
   <section class="tab-content active" id="tab-list">
     <div class="filter-bar">
-      <input type="text" id="filterText" placeholder="🔍 競馬場・メモなどで検索">
-      <select id="filterBetType">
-        <option value="">すべての馬券種別</option>
-      </select>
-      <input type="month" id="filterMonth">
-      <button id="clearFilter" class="btn-secondary">クリア</button>
+      <input type="search" id="filterText" placeholder="🔍 競馬場・メモなどで検索" autocomplete="off">
+      <div class="filter-row">
+        <select id="filterBetType">
+          <option value="">すべての馬券種別</option>
+        </select>
+        <input type="month" id="filterMonth">
+        <button id="clearFilter" class="btn-secondary btn-icon" aria-label="クリア">×</button>
+      </div>
     </div>
     <div class="record-count" id="recordCount"></div>
     <div class="records" id="records"></div>
@@ -84,11 +87,11 @@
         </div>
         <div class="form-field">
           <label for="raceNo">レース番号</label>
-          <input type="number" id="raceNo" min="1" max="12" placeholder="1〜12">
+          <input type="number" id="raceNo" min="1" max="12" placeholder="1〜12" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-field">
           <label for="raceName">レース名</label>
-          <input type="text" id="raceName" placeholder="例: 日本ダービー">
+          <input type="text" id="raceName" placeholder="例: 日本ダービー" autocomplete="off">
         </div>
         <div class="form-field">
           <label for="betType">馬券種別 <span class="required">*</span></label>
@@ -107,15 +110,15 @@
         </div>
         <div class="form-field">
           <label for="selection">買い目</label>
-          <input type="text" id="selection" placeholder="例: 5-7、1-3-8">
+          <input type="text" id="selection" placeholder="例: 5-7、1-3-8" autocomplete="off">
         </div>
         <div class="form-field">
           <label for="invest">投資額 (円) <span class="required">*</span></label>
-          <input type="number" id="invest" min="0" step="100" required placeholder="例: 1000">
+          <input type="number" id="invest" min="0" step="100" required placeholder="例: 1000" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-field">
           <label for="returnAmount">払戻金 (円)</label>
-          <input type="number" id="returnAmount" min="0" step="10" placeholder="外れた場合は0または空欄">
+          <input type="number" id="returnAmount" min="0" step="10" placeholder="外れた場合は0または空欄" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-field full-width">
           <label for="memo">メモ</label>
@@ -164,7 +167,7 @@
     <div class="data-actions">
       <div class="data-card">
         <h3>📤 エクスポート</h3>
-        <p>全データをJSONファイルとしてダウンロードします。バックアップにご利用ください。</p>
+        <p>全データをファイルとしてダウンロードします。バックアップにご利用ください。</p>
         <button id="exportBtn" class="btn-primary">JSONでエクスポート</button>
         <button id="exportCsvBtn" class="btn-secondary">CSVでエクスポート</button>
       </div>
@@ -182,6 +185,25 @@
     </div>
   </section>
 </main>
+
+<nav class="tab-bar" role="tablist">
+  <button class="tab-btn active" data-tab="list" role="tab">
+    <span class="tab-icon">📋</span>
+    <span class="tab-label">一覧</span>
+  </button>
+  <button class="tab-btn" data-tab="add" role="tab">
+    <span class="tab-icon">➕</span>
+    <span class="tab-label">追加</span>
+  </button>
+  <button class="tab-btn" data-tab="stats" role="tab">
+    <span class="tab-icon">📊</span>
+    <span class="tab-label">集計</span>
+  </button>
+  <button class="tab-btn" data-tab="data" role="tab">
+    <span class="tab-icon">⚙️</span>
+    <span class="tab-label">データ</span>
+  </button>
+</nav>
 
 <div id="toast" class="toast"></div>
 

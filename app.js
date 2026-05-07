@@ -70,6 +70,7 @@
         s.classList.toggle('active', s.id === `tab-${target}`);
       });
       if (target === 'stats') renderStats();
+      window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     });
   });
 
@@ -142,11 +143,10 @@
             <div>
               <strong>${escapeHtml(r.date || '')}</strong>
               <span class="record-meta">
-                ${escapeHtml(r.venue || '')}${r.raceNo ? ` ${r.raceNo}R` : ''}
-                ${r.raceName ? ` - ${escapeHtml(r.raceName)}` : ''}
+                ${escapeHtml(r.venue || '')}${r.raceNo ? ` ${r.raceNo}R` : ''}${r.raceName ? ` ・ ${escapeHtml(r.raceName)}` : ''}
               </span>
             </div>
-            <div>
+            <div class="record-tags">
               <span class="record-tag">${escapeHtml(r.betType || '')}</span>
               ${r.selection ? `<span class="record-tag">${escapeHtml(r.selection)}</span>` : ''}
             </div>
