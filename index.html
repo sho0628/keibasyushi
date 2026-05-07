@@ -12,7 +12,7 @@
 <title>競馬収支管理</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%231f6f3f'/><text x='90' y='118' font-size='100' text-anchor='middle' fill='white'>🏇</text></svg>">
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text x='16' y='25' font-size='24' text-anchor='middle'>🏇</text></svg>">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <header class="app-header">
@@ -48,18 +48,28 @@
 <main>
   <!-- 記録一覧 -->
   <section class="tab-content active" id="tab-list">
-    <div class="filter-bar">
-      <input type="search" id="filterText" placeholder="🔍 競馬場・メモなどで検索" autocomplete="off">
-      <div class="filter-row">
-        <select id="filterBetType">
-          <option value="">すべての馬券種別</option>
-        </select>
-        <input type="month" id="filterMonth">
-        <button id="clearFilter" class="btn-secondary btn-icon" aria-label="クリア">×</button>
+    <div class="calendar">
+      <div class="cal-header">
+        <button class="cal-nav" id="calPrev" aria-label="前の月">‹</button>
+        <button class="cal-title" id="calTitle" aria-label="今月へ"></button>
+        <button class="cal-nav" id="calNext" aria-label="次の月">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <div class="cal-weekday cal-sun">日</div>
+        <div class="cal-weekday">月</div>
+        <div class="cal-weekday">火</div>
+        <div class="cal-weekday">水</div>
+        <div class="cal-weekday">木</div>
+        <div class="cal-weekday">金</div>
+        <div class="cal-weekday cal-sat">土</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-footer">
+        <span class="cal-month-label">月計</span>
+        <span class="cal-monthly-total" id="calMonthlyTotal">¥0</span>
       </div>
     </div>
-    <div class="record-count" id="recordCount"></div>
-    <div class="records" id="records"></div>
+    <div class="day-detail" id="dayDetail"></div>
   </section>
 
   <!-- 新規追加 -->
@@ -197,6 +207,6 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

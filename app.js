@@ -74,13 +74,6 @@
     });
   });
 
-  // ===== Bet-type filter options =====
-  function populateBetTypeFilter() {
-    const select = document.getElementById('filterBetType');
-    select.innerHTML = '<option value="">すべての馬券種別</option>' +
-      BET_TYPES.map(t => `<option>${t}</option>`).join('');
-  }
-
   // ===== Summary =====
   function renderSummary() {
     const s = calcStats(records);
@@ -98,41 +91,129 @@
       s.hitRate == null ? '-' : `${pct(s.hitRate)} (${s.hits}/${s.total})`;
   }
 
-  // ===== Records list =====
-  function renderRecords() {
-    const container = document.getElementById('records');
-    const text = document.getElementById('filterText').value.trim().toLowerCase();
-    const betType = document.getElementById('filterBetType').value;
-    const month = document.getElementById('filterMonth').value;
+  // ===== Calendar =====
+  let calYear, calMonthIdx, selectedDate;
 
-    let filtered = records.slice();
-    if (text) {
-      filtered = filtered.filter(r =>
-        (r.venue || '').toLowerCase().includes(text) ||
-        (r.raceName || '').toLowerCase().includes(text) ||
-        (r.memo || '').toLowerCase().includes(text) ||
-        (r.selection || '').toLowerCase().includes(text)
-      );
+  function initCalendar() {
+    const t = new Date();
+    calYear = t.getFullYear();
+    calMonthIdx = t.getMonth();
+    selectedDate = todayISO();
+  }
+
+  function dateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function navigateMonth(delta) {
+    calMonthIdx += delta;
+    if (calMonthIdx < 0) { calMonthIdx = 11; calYear--; }
+    else if (calMonthIdx > 11) { calMonthIdx = 0; calYear++; }
+    renderCalendar();
+  }
+
+  function jumpToToday() {
+    const t = new Date();
+    calYear = t.getFullYear();
+    calMonthIdx = t.getMonth();
+    selectedDate = todayISO();
+    renderCalendar();
+  }
+
+  function getCalendarCells() {
+    const first = new Date(calYear, calMonthIdx, 1);
+    const firstDow = first.getDay();
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      cells.push(new Date(calYear, calMonthIdx, 1 - firstDow + i));
     }
-    if (betType) filtered = filtered.filter(r => r.betType === betType);
-    if (month) filtered = filtered.filter(r => (r.date || '').startsWith(month));
+    return cells;
+  }
 
-    filtered.sort((a, b) => (b.date || '').localeCompare(a.date || '') ||
-                            (b.createdAt || 0) - (a.createdAt || 0));
+  function renderCalendar() {
+    document.getElementById('calTitle').textContent =
+      `${calYear}年${String(calMonthIdx + 1).padStart(2, '0')}月`;
 
-    document.getElementById('recordCount').textContent =
-      `${filtered.length} 件 / 全 ${records.length} 件`;
+    const byDate = new Map();
+    for (const r of records) {
+      if (!r.date) continue;
+      if (!byDate.has(r.date)) byDate.set(r.date, []);
+      byDate.get(r.date).push(r);
+    }
 
-    if (filtered.length === 0) {
-      container.innerHTML = `
+    const today = todayISO();
+    let monthlyTotal = 0;
+    const cells = getCalendarCells();
+
+    document.getElementById('calGrid').innerHTML = cells.map(d => {
+      const key = dateKey(d);
+      const isCurrentMonth = d.getMonth() === calMonthIdx;
+      const isSelected = key === selectedDate;
+      const isToday = key === today;
+      const dow = d.getDay();
+      const dayRecords = byDate.get(key) || [];
+      const profit = dayRecords.reduce((s, r) => s + (r.returnAmount || 0) - (r.invest || 0), 0);
+      if (isCurrentMonth) monthlyTotal += profit;
+
+      let amountHtml = '';
+      if (dayRecords.length > 0) {
+        const cls = profit >= 0 ? 'cal-pos' : 'cal-neg';
+        const sign = profit < 0 ? '-' : '';
+        amountHtml = `<span class="cal-amount ${cls}">${sign}${Math.abs(profit).toLocaleString('ja-JP')}</span>`;
+      }
+
+      const classes = ['cal-day'];
+      if (dow === 0) classes.push('cal-sun');
+      else if (dow === 6) classes.push('cal-sat');
+      if (!isCurrentMonth) classes.push('cal-other-month');
+      if (isSelected) classes.push('cal-selected');
+      if (isToday) classes.push('cal-today');
+
+      return `<button type="button" class="${classes.join(' ')}" data-date="${key}">
+        <span class="cal-day-num">${d.getDate()}</span>
+        ${amountHtml}
+      </button>`;
+    }).join('');
+
+    const totalEl = document.getElementById('calMonthlyTotal');
+    const sign = monthlyTotal > 0 ? '+' : '';
+    totalEl.textContent = `${sign}${monthlyTotal.toLocaleString('ja-JP')} 円`;
+    totalEl.classList.toggle('cal-pos', monthlyTotal > 0);
+    totalEl.classList.toggle('cal-neg', monthlyTotal < 0);
+
+    renderDayDetail();
+  }
+
+  function formatDayLabel(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const dowJp = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+    return `${y}年${m}月${d}日 (${dowJp})`;
+  }
+
+  function renderDayDetail() {
+    const container = document.getElementById('dayDetail');
+    if (!selectedDate) { container.innerHTML = ''; return; }
+    const dayRecords = records
+      .filter(r => r.date === selectedDate)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    const header = `
+      <div class="day-detail-header">
+        <span>${formatDayLabel(selectedDate)}</span>
+        <span class="day-detail-count">${dayRecords.length} 件</span>
+      </div>`;
+
+    if (dayRecords.length === 0) {
+      container.innerHTML = `${header}
         <div class="empty-state">
-          <p>📋 記録がありません</p>
-          <p style="font-size:0.85rem">「新規追加」タブから記録を追加してください</p>
+          <p>📋 この日の記録はありません</p>
+          <p style="font-size:0.85rem">「追加」タブから記録できます</p>
         </div>`;
       return;
     }
 
-    container.innerHTML = filtered.map(r => {
+    const cards = dayRecords.map(r => {
       const profit = (r.returnAmount || 0) - (r.invest || 0);
       const rate = r.invest > 0 ? (r.returnAmount || 0) / r.invest * 100 : null;
       const isWin = (r.returnAmount || 0) > 0;
@@ -141,7 +222,6 @@
         <div class="record-card ${isWin ? 'win' : (r.invest > 0 ? 'lose' : '')}">
           <div class="record-header">
             <div>
-              <strong>${escapeHtml(r.date || '')}</strong>
               <span class="record-meta">
                 ${escapeHtml(r.venue || '')}${r.raceNo ? ` ${r.raceNo}R` : ''}${r.raceName ? ` ・ ${escapeHtml(r.raceName)}` : ''}
               </span>
@@ -176,6 +256,8 @@
           </div>
         </div>`;
     }).join('');
+
+    container.innerHTML = `${header}<div class="records">${cards}</div>`;
   }
 
   function escapeHtml(s) {
@@ -184,25 +266,24 @@
     }[c]));
   }
 
-  // Event delegation for record actions
-  document.getElementById('records').addEventListener('click', (e) => {
+  // Calendar event listeners
+  document.getElementById('calPrev').addEventListener('click', () => navigateMonth(-1));
+  document.getElementById('calNext').addEventListener('click', () => navigateMonth(1));
+  document.getElementById('calTitle').addEventListener('click', jumpToToday);
+  document.getElementById('calGrid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cal-day');
+    if (!btn) return;
+    selectedDate = btn.dataset.date;
+    renderCalendar();
+  });
+
+  // Day detail event delegation (edit/delete)
+  document.getElementById('dayDetail').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
     if (btn.dataset.action === 'edit') startEdit(id);
     else if (btn.dataset.action === 'delete') deleteRecord(id);
-  });
-
-  // Filter listeners
-  ['filterText', 'filterBetType', 'filterMonth'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderRecords);
-    document.getElementById(id).addEventListener('change', renderRecords);
-  });
-  document.getElementById('clearFilter').addEventListener('click', () => {
-    document.getElementById('filterText').value = '';
-    document.getElementById('filterBetType').value = '';
-    document.getElementById('filterMonth').value = '';
-    renderRecords();
   });
 
   // ===== Form (multi-bet) =====
@@ -378,6 +459,12 @@
       showToast(bets.length > 1 ? `${bets.length} 件登録しました` : '登録しました', 'success');
     }
     save();
+    if (raceInfo.date) {
+      const [y, m] = raceInfo.date.split('-').map(Number);
+      calYear = y;
+      calMonthIdx = m - 1;
+      selectedDate = raceInfo.date;
+    }
     resetForm();
     renderAll();
     document.querySelector('[data-tab="list"]').click();
@@ -558,13 +645,13 @@
   // ===== Init =====
   function renderAll() {
     renderSummary();
-    renderRecords();
+    renderCalendar();
     if (document.getElementById('tab-stats').classList.contains('active')) {
       renderStats();
     }
   }
 
-  populateBetTypeFilter();
+  initCalendar();
   resetForm();
   renderAll();
 })();
