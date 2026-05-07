@@ -136,6 +136,12 @@ button, input, select, textarea {
   letter-spacing: -0.02em;
 }
 
+.summary-primary-item .value,
+.summary-primary-item .value.positive,
+.summary-primary-item .value.negative {
+  color: white;
+}
+
 .value.positive { color: #6df0a3; }
 .value.negative { color: #ffb3a7; }
 
