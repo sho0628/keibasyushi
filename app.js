@@ -205,14 +205,81 @@
     renderRecords();
   });
 
-  // ===== Form =====
+  // ===== Form (multi-bet) =====
+  function createBetRow(data = {}) {
+    const div = document.createElement('div');
+    div.className = 'bet-row';
+    div.innerHTML = `
+      <button type="button" class="bet-remove" aria-label="この馬券を削除">×</button>
+      <div class="bet-row-grid">
+        <div class="form-field">
+          <label>馬券種別 <span class="required">*</span></label>
+          <select class="bet-type" required>
+            <option value="">選択</option>
+            ${BET_TYPES.map(t => `<option${t === data.betType ? ' selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-field">
+          <label>買い目</label>
+          <input type="text" class="bet-selection" value="${escapeHtml(data.selection || '')}" placeholder="例: 5-7" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label>投資額 (円) <span class="required">*</span></label>
+          <input type="number" class="bet-invest" value="${data.invest || ''}" min="0" step="100" required placeholder="例: 1000" inputmode="numeric" pattern="[0-9]*">
+        </div>
+        <div class="form-field">
+          <label>払戻金 (円)</label>
+          <input type="number" class="bet-return" value="${data.returnAmount || ''}" min="0" step="10" placeholder="外れは0/空欄" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+    `;
+    div.querySelector('.bet-remove').addEventListener('click', () => {
+      const rows = document.querySelectorAll('.bet-row');
+      if (rows.length <= 1) return;
+      div.remove();
+      updateBetRowsState();
+    });
+    return div;
+  }
+
+  function addBetRow(data) {
+    const row = createBetRow(data);
+    document.getElementById('betRows').appendChild(row);
+    updateBetRowsState();
+    return row;
+  }
+
+  function clearBetRows() {
+    document.getElementById('betRows').innerHTML = '';
+  }
+
+  function updateBetRowsState() {
+    const rows = document.querySelectorAll('.bet-row');
+    rows.forEach((row, i) => {
+      const removeBtn = row.querySelector('.bet-remove');
+      removeBtn.disabled = rows.length <= 1;
+    });
+    const count = rows.length;
+    const submitBtn = document.getElementById('submitBtn');
+    if (editingId) {
+      submitBtn.textContent = '更新する';
+      document.getElementById('addBetBtn').style.display = 'none';
+      document.getElementById('betsCount').textContent = '';
+    } else {
+      submitBtn.textContent = count > 1 ? `${count} 件まとめて登録` : '登録する';
+      document.getElementById('addBetBtn').style.display = '';
+      document.getElementById('betsCount').textContent = `${count} 件`;
+    }
+  }
+
   function resetForm() {
     document.getElementById('recordForm').reset();
     document.getElementById('recordId').value = '';
     document.getElementById('date').value = todayISO();
-    document.getElementById('submitBtn').textContent = '登録する';
     document.getElementById('cancelEditBtn').style.display = 'none';
     editingId = null;
+    clearBetRows();
+    addBetRow();
   }
 
   function startEdit(id) {
@@ -224,12 +291,14 @@
     document.getElementById('venue').value = r.venue || '';
     document.getElementById('raceNo').value = r.raceNo || '';
     document.getElementById('raceName').value = r.raceName || '';
-    document.getElementById('betType').value = r.betType || '';
-    document.getElementById('selection').value = r.selection || '';
-    document.getElementById('invest').value = r.invest || '';
-    document.getElementById('returnAmount').value = r.returnAmount || '';
     document.getElementById('memo').value = r.memo || '';
-    document.getElementById('submitBtn').textContent = '更新する';
+    clearBetRows();
+    addBetRow({
+      betType: r.betType,
+      selection: r.selection,
+      invest: r.invest,
+      returnAmount: r.returnAmount,
+    });
     document.getElementById('cancelEditBtn').style.display = '';
     document.querySelector('[data-tab="add"]').click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -248,33 +317,65 @@
     document.querySelector('[data-tab="list"]').click();
   });
 
+  document.getElementById('addBetBtn').addEventListener('click', () => {
+    const row = addBetRow();
+    row.querySelector('.bet-type').focus();
+  });
+
   document.getElementById('recordForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const data = {
+    const raceInfo = {
       date: document.getElementById('date').value,
       venue: document.getElementById('venue').value,
       raceNo: document.getElementById('raceNo').value
         ? Number(document.getElementById('raceNo').value) : null,
       raceName: document.getElementById('raceName').value.trim(),
-      betType: document.getElementById('betType').value,
-      selection: document.getElementById('selection').value.trim(),
-      invest: Number(document.getElementById('invest').value) || 0,
-      returnAmount: Number(document.getElementById('returnAmount').value) || 0,
       memo: document.getElementById('memo').value.trim(),
     };
 
-    if (!data.date || !data.venue || !data.betType || data.invest <= 0) {
-      showToast('必須項目を入力してください', 'error');
+    if (!raceInfo.date || !raceInfo.venue) {
+      showToast('日付と競馬場を入力してください', 'error');
       return;
+    }
+
+    const betRows = [...document.querySelectorAll('.bet-row')];
+    const bets = betRows.map(row => ({
+      betType: row.querySelector('.bet-type').value,
+      selection: row.querySelector('.bet-selection').value.trim(),
+      invest: Number(row.querySelector('.bet-invest').value) || 0,
+      returnAmount: Number(row.querySelector('.bet-return').value) || 0,
+    }));
+
+    for (let i = 0; i < bets.length; i++) {
+      const b = bets[i];
+      if (!b.betType || b.invest <= 0) {
+        showToast(`${i + 1}件目の馬券種別と投資額を入力してください`, 'error');
+        return;
+      }
     }
 
     if (editingId) {
       const idx = records.findIndex(r => r.id === editingId);
-      if (idx >= 0) records[idx] = { ...records[idx], ...data, updatedAt: Date.now() };
+      if (idx >= 0) {
+        records[idx] = {
+          ...records[idx],
+          ...raceInfo,
+          ...bets[0],
+          updatedAt: Date.now(),
+        };
+      }
       showToast('更新しました', 'success');
     } else {
-      records.push({ id: uid(), createdAt: Date.now(), ...data });
-      showToast('登録しました', 'success');
+      const now = Date.now();
+      bets.forEach((bet, i) => {
+        records.push({
+          id: uid(),
+          createdAt: now + i,
+          ...raceInfo,
+          ...bet,
+        });
+      });
+      showToast(bets.length > 1 ? `${bets.length} 件登録しました` : '登録しました', 'success');
     }
     save();
     resetForm();
