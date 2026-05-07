@@ -95,13 +95,16 @@ button, input, select, textarea {
   font-weight: 500;
 }
 
-.primary-value {
+.primary-value,
+.primary-value.positive,
+.primary-value.negative {
   display: block;
   font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  color: white;
 }
 
 .summary-secondary {
